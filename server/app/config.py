@@ -113,7 +113,9 @@ LOG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 # ====================================
 
 # Límite de requests por minuto para endpoints de procesamiento
-RATE_LIMIT_PROCESS_FRAME = "10/minute"
+# Cada Raspberry envía cada 2 seg = 30 req/min
+# Con 2 Raspberries = 60 req/min
+RATE_LIMIT_PROCESS_FRAME = "100/minute"
 
 # Límite de requests por minuto para endpoints de lectura
 RATE_LIMIT_READ = "60/minute"
