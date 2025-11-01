@@ -14,7 +14,7 @@ import re
 import asyncio
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Form, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,7 +39,8 @@ from app.config import (
     APP_VERSION,
     APP_DESCRIPTION,
     LOG_LEVEL,
-    LOG_FORMAT
+    LOG_FORMAT,
+    MAX_VIEWERS_PER_DEVICE
 )
 from app.core.database import db
 from app.core.face_recognition import face_recognition_processor
@@ -83,13 +84,22 @@ async def lifespan(app: FastAPI):
     # SHUTDOWN
     logger.info("Cerrando servidor...")
 
-    # Cerrar todas las conexiones WebSocket
+    # Cerrar todas las conexiones WebSocket de dispositivos
     for device_id, ws in list(active_websockets.items()):
         try:
             await ws.close()
             logger.info(f"Conexión WebSocket cerrada: {device_id}")
         except:
             pass
+
+    # Cerrar todas las conexiones WebSocket de viewers
+    for device_id, viewers in list(active_viewers.items()):
+        for ws in viewers:
+            try:
+                await ws.close()
+            except:
+                pass
+        logger.info(f"Viewers cerrados para {device_id}")
 
     # Cerrar ThreadPoolExecutor
     executor.shutdown(wait=True)
@@ -157,8 +167,12 @@ class RegistroRequest(BaseModel):
 # Cache para IPs de dispositivos (evitar consultas constantes)
 dispositivos_cache: Dict[str, str] = {}
 
-# Gestor de conexiones WebSocket activas
+# Gestor de conexiones WebSocket activas (dispositivos IoT)
 active_websockets: Dict[str, WebSocket] = {}
+
+# Gestor de conexiones WebSocket de viewers (frontend)
+# Formato: {device_id: [WebSocket, WebSocket, ...]}
+active_viewers: Dict[str, List[WebSocket]] = {}
 
 
 # ====================================
@@ -620,7 +634,7 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
 
     try:
         while True:
-            # Recibir mensajes del cliente (principalmente pings)
+            # Recibir mensajes del cliente (principalmente pings y video frames)
             data = await websocket.receive_json()
 
             if data.get("type") == "ping":
@@ -631,6 +645,25 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
                 # El dispositivo puede enviar información de estado
                 logger.info(f"Estado de {device_id}: {data}")
 
+            elif data.get("type") == "video_frame":
+                # Relay frame a todos los viewers conectados para este dispositivo
+                if device_id in active_viewers and len(active_viewers[device_id]) > 0:
+                    # Copiar lista para evitar problemas si se modifica durante iteración
+                    viewers = active_viewers[device_id].copy()
+                    disconnected_viewers = []
+
+                    for viewer_ws in viewers:
+                        try:
+                            await viewer_ws.send_json(data)
+                        except Exception as e:
+                            logger.warning(f"Error enviando frame a viewer: {e}")
+                            disconnected_viewers.append(viewer_ws)
+
+                    # Limpiar viewers desconectados
+                    for viewer_ws in disconnected_viewers:
+                        if viewer_ws in active_viewers[device_id]:
+                            active_viewers[device_id].remove(viewer_ws)
+
     except WebSocketDisconnect:
         logger.info(f"WebSocket desconectado: {device_id}")
     except Exception as e:
@@ -640,6 +673,62 @@ async def websocket_endpoint(websocket: WebSocket, device_id: str):
         if device_id in active_websockets:
             del active_websockets[device_id]
         logger.info(f"Conexión cerrada: {device_id} ({len(active_websockets)} conexiones activas)")
+
+
+@app.websocket("/ws/viewer/{device_id}")
+async def websocket_viewer_endpoint(websocket: WebSocket, device_id: str):
+    """
+    WebSocket endpoint para viewers (frontend) que quieren ver el stream de una cámara
+
+    Args:
+        device_id: ID del dispositivo cuyo stream se quiere ver (ej: "rpi_001")
+
+    Protocol:
+        - Server -> Client: {"type": "video_frame", "frame": "base64...", "timestamp": "..."}
+        - Server -> Client: {"type": "error", "message": "..."} si hay problemas
+
+    Note:
+        Los frames son relay desde el dispositivo IoT. Límite de MAX_VIEWERS_PER_DEVICE viewers simultáneos.
+    """
+    # Verificar límite de viewers
+    if device_id in active_viewers and len(active_viewers[device_id]) >= MAX_VIEWERS_PER_DEVICE:
+        await websocket.close(code=1008, reason=f"Límite de {MAX_VIEWERS_PER_DEVICE} viewers alcanzado")
+        logger.warning(f"Viewer rechazado para {device_id}: límite de viewers alcanzado")
+        return
+
+    await websocket.accept()
+
+    # Agregar viewer a la lista
+    if device_id not in active_viewers:
+        active_viewers[device_id] = []
+    active_viewers[device_id].append(websocket)
+
+    logger.info(f"Viewer conectado para {device_id} ({len(active_viewers[device_id])} viewers activos)")
+
+    try:
+        # Mantener conexión abierta
+        while True:
+            # Recibir mensajes del viewer (principalmente para mantener conexión viva)
+            data = await websocket.receive_text()
+
+            # El viewer puede enviar pings, pero no es necesario responder
+            # Los frames se envían desde el device endpoint cuando llegan
+
+    except WebSocketDisconnect:
+        logger.info(f"Viewer desconectado de {device_id}")
+    except Exception as e:
+        logger.error(f"Error en viewer WebSocket para {device_id}: {e}")
+    finally:
+        # Limpiar viewer
+        if device_id in active_viewers:
+            if websocket in active_viewers[device_id]:
+                active_viewers[device_id].remove(websocket)
+
+            # Si no quedan viewers, eliminar entrada del dict
+            if len(active_viewers[device_id]) == 0:
+                del active_viewers[device_id]
+
+        logger.info(f"Viewer removido de {device_id} ({len(active_viewers.get(device_id, []))} viewers restantes)")
 
 
 # ====================================

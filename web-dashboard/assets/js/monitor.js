@@ -4,7 +4,10 @@
 let state = {
     devices: [],
     selectedDevice: null,
-    streamActive: false
+    streamActive: false,
+    websocket: null,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 5
 };
 
 // Elementos del DOM
@@ -221,7 +224,7 @@ function toggleStream() {
 }
 
 /**
- * Inicia el stream de video
+ * Inicia el stream de video via WebSocket
  */
 function iniciarStream() {
     if (!state.selectedDevice) {
@@ -237,15 +240,28 @@ function iniciarStream() {
     // Mostrar loading
     if (videoLoading) videoLoading.style.display = 'flex';
 
-    // Construir URL del stream
-    const streamUrl = `http://${state.selectedDevice.ip}:8080/video_feed`;
+    // Determinar protocolo WebSocket basado en la URL actual
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/viewer/${state.selectedDevice.id}`;
 
-    // Configurar stream
-    if (videoStream) {
-        videoStream.onload = () => {
+    console.log('Conectando WebSocket a:', wsUrl);
+
+    try {
+        // Cerrar conexión anterior si existe
+        if (state.websocket) {
+            state.websocket.close();
+        }
+
+        // Crear nueva conexión WebSocket
+        state.websocket = new WebSocket(wsUrl);
+
+        // Handler: Conexión establecida
+        state.websocket.onopen = () => {
+            console.log('✅ WebSocket conectado');
             if (videoLoading) videoLoading.style.display = 'none';
-            videoStream.style.display = 'block';
+
             state.streamActive = true;
+            state.reconnectAttempts = 0;
 
             if (btnToggleStream) {
                 btnToggleStream.textContent = 'Detener Stream';
@@ -260,9 +276,51 @@ function iniciarStream() {
             mostrarToast('Stream iniciado', 'success');
         };
 
-        videoStream.onerror = () => {
+        // Handler: Mensaje recibido (frame de video)
+        state.websocket.onmessage = (event) => {
+            try {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'video_frame' && data.frame) {
+                    // Actualizar imagen con frame base64
+                    if (videoStream) {
+                        videoStream.src = `data:image/jpeg;base64,${data.frame}`;
+                        videoStream.style.display = 'block';
+
+                        // Actualizar FPS (opcional)
+                        const statFpsEl = document.getElementById('stat-fps');
+                        if (statFpsEl && data.timestamp) {
+                            // Calcular FPS aproximado
+                            if (state.lastFrameTime) {
+                                const fps = 1000 / (Date.now() - state.lastFrameTime);
+                                statFpsEl.textContent = fps.toFixed(1);
+                            }
+                            state.lastFrameTime = Date.now();
+                        }
+                    }
+                } else if (data.type === 'error') {
+                    console.error('Error del servidor:', data.message);
+                    mostrarToast(data.message || 'Error en el stream', 'error');
+                }
+            } catch (error) {
+                console.error('Error procesando frame:', error);
+            }
+        };
+
+        // Handler: Error de conexión
+        state.websocket.onerror = (error) => {
+            console.error('❌ Error WebSocket:', error);
+
             if (videoLoading) videoLoading.style.display = 'none';
             if (videoError) videoError.style.display = 'flex';
+
+            mostrarToast('Error de conexión WebSocket', 'error');
+        };
+
+        // Handler: Conexión cerrada
+        state.websocket.onclose = (event) => {
+            console.log('WebSocket cerrado:', event.code, event.reason);
+
             state.streamActive = false;
 
             if (btnToggleStream) {
@@ -271,11 +329,32 @@ function iniciarStream() {
                 btnToggleStream.classList.remove('btn-error');
             }
 
-            mostrarToast('Error al cargar stream', 'error');
+            if (btnFullscreen) {
+                btnFullscreen.disabled = true;
+            }
+
+            // Intentar reconectar si no fue cierre intencional
+            if (event.code !== 1000 && state.reconnectAttempts < state.maxReconnectAttempts) {
+                state.reconnectAttempts++;
+                console.log(`🔄 Intentando reconectar (${state.reconnectAttempts}/${state.maxReconnectAttempts})...`);
+
+                setTimeout(() => {
+                    if (state.selectedDevice && !state.streamActive) {
+                        iniciarStream();
+                    }
+                }, 2000 * state.reconnectAttempts); // Backoff exponencial
+            } else if (state.reconnectAttempts >= state.maxReconnectAttempts) {
+                mostrarToast('No se pudo reconectar al stream', 'error');
+                if (videoError) videoError.style.display = 'flex';
+            }
         };
 
-        // Agregar timestamp para evitar cache
-        videoStream.src = `${streamUrl}?t=${Date.now()}`;
+    } catch (error) {
+        console.error('Error al iniciar WebSocket:', error);
+        mostrarToast('Error al iniciar stream', 'error');
+
+        if (videoLoading) videoLoading.style.display = 'none';
+        if (videoError) videoError.style.display = 'flex';
     }
 }
 
@@ -283,6 +362,12 @@ function iniciarStream() {
  * Detiene el stream de video
  */
 function detenerStream() {
+    // Cerrar WebSocket
+    if (state.websocket) {
+        state.websocket.close(1000, 'Usuario detuvo el stream'); // 1000 = cierre normal
+        state.websocket = null;
+    }
+
     if (videoStream) {
         videoStream.src = '';
         videoStream.style.display = 'none';
@@ -293,6 +378,7 @@ function detenerStream() {
     if (videoPlaceholder) videoPlaceholder.style.display = 'flex';
 
     state.streamActive = false;
+    state.reconnectAttempts = 0;
 
     if (btnToggleStream) {
         btnToggleStream.textContent = 'Iniciar Stream';

@@ -15,5 +15,14 @@ requests>=2.31.0
 # RPi.GPIO para control de LEDs
 RPi.GPIO>=0.7.1
 
+# WebSocket client para streaming
+websockets>=11.0.3
+
+# Flask para servidor local de streaming
+Flask>=2.3.0
+
+# python-dotenv para variables de entorno
+python-dotenv>=1.0.0
+
 # Dependencias adicionales útiles
 numpy>=1.24.0

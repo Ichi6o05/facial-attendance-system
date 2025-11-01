@@ -17,7 +17,8 @@ from app.config import (
     PHOTOS_DIR,
     ENCODINGS_FILE,
     FACE_TOLERANCE,
-    FACE_DETECTION_MODEL
+    FACE_DETECTION_MODEL,
+    KEEP_PHOTOS_AFTER_ENCODING
 )
 
 logger = logging.getLogger(__name__)
@@ -69,13 +70,15 @@ class FaceRecognitionProcessor:
                 [{'id_estudiante': int, 'nombre_completo': str, 'path_foto_referencia': str}, ...]
 
         Note:
-            Los encodings se guardan automáticamente en ENCODINGS_FILE
+            Los encodings se guardan automáticamente en ENCODINGS_FILE.
+            Si KEEP_PHOTOS_AFTER_ENCODING=false, las fotos se eliminan después de generar encodings.
         """
         logger.info("Generando encodings desde fotos de estudiantes...")
 
         encodings: List[np.ndarray] = []
         ids: List[int] = []
         names: List[str] = []
+        fotos_procesadas: List[str] = []  # Track de fotos exitosamente procesadas
 
         for estudiante in estudiantes_db:
             id_estudiante = estudiante['id_estudiante']
@@ -100,6 +103,7 @@ class FaceRecognitionProcessor:
                     encodings.append(face_encodings[0])
                     ids.append(id_estudiante)
                     names.append(nombre)
+                    fotos_procesadas.append(full_path)  # Track para eliminar después
                     logger.info(f"Encoding generado exitosamente: {nombre}")
                 else:
                     logger.warning(
@@ -130,6 +134,28 @@ class FaceRecognitionProcessor:
             self.encodings_loaded = True
 
             logger.info(f"Encodings guardados exitosamente: {len(encodings)} rostros en {ENCODINGS_FILE}")
+
+            # Eliminar fotos si está configurado (cumplimiento Ley 19.628)
+            if not KEEP_PHOTOS_AFTER_ENCODING:
+                logger.info("Eliminando fotos originales (KEEP_PHOTOS_AFTER_ENCODING=false)...")
+                fotos_eliminadas = 0
+                for foto_path in fotos_procesadas:
+                    try:
+                        os.remove(foto_path)
+                        fotos_eliminadas += 1
+                        logger.debug(f"Foto eliminada: {foto_path}")
+                    except Exception as e:
+                        logger.error(f"Error al eliminar foto {foto_path}: {e}")
+
+                logger.info(
+                    f"Fotos eliminadas: {fotos_eliminadas}/{len(fotos_procesadas)} "
+                    f"(cumplimiento principio de minimización de datos - Ley 19.628)"
+                )
+            else:
+                logger.info(
+                    f"Fotos conservadas (KEEP_PHOTOS_AFTER_ENCODING=true). "
+                    f"IMPORTANTE: Requiere consentimiento explícito de estudiantes."
+                )
         else:
             logger.error(
                 "No se generó ningún encoding. Verifica que las fotos contengan rostros visibles."

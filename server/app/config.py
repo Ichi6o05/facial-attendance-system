@@ -67,6 +67,17 @@ FACE_DETECTION_MODEL = os.getenv("FACE_DETECTION_MODEL", "hog")
 # Archivo de encodings (cache)
 ENCODINGS_FILE = DATA_DIR / "photos" / "encodings.pkl"
 
+# Retención de fotos después de generar encodings
+# IMPORTANTE: Consideraciones legales (Ley 19.628 Chile):
+# - Fotos = datos biométricos sensibles que requieren consentimiento explícito
+# - Principio de minimización: solo guardar datos estrictamente necesarios
+# - Encodings (128D vectors) son suficientes para reconocimiento
+# - Eliminar fotos reduce riesgo en caso de breach (no se pueden revertir encodings)
+#
+# true  = Mantener fotos (útil para debugging, requiere consentimiento explícito)
+# false = Eliminar fotos después de encoding (recomendado para cumplimiento legal)
+KEEP_PHOTOS_AFTER_ENCODING = os.getenv("KEEP_PHOTOS_AFTER_ENCODING", "false").lower() == "true"
+
 # ====================================
 # SISTEMA DE ASISTENCIA
 # ====================================
@@ -98,6 +109,9 @@ WS_TIMEOUT = 60
 
 # Intervalo de ping/pong para mantener conexión viva (segundos)
 WS_PING_INTERVAL = 30
+
+# Máximo de viewers simultáneos por dispositivo (streaming)
+MAX_VIEWERS_PER_DEVICE = int(os.getenv("MAX_VIEWERS_PER_DEVICE", 5))
 
 # ====================================
 # LOGGING

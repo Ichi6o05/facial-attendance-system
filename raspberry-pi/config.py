@@ -54,6 +54,10 @@ WS_RECONNECT_DELAY = int(os.getenv("WS_RECONNECT_DELAY", 5))
 ENABLE_WEB_STREAM = os.getenv("ENABLE_WEB_STREAM", "true").lower() == "true"
 WEB_STREAM_PORT = int(os.getenv("WEB_STREAM_PORT", 8080))
 
+# WebSocket streaming para frontend centralizado
+ENABLE_WS_STREAMING = os.getenv("ENABLE_WS_STREAMING", "true").lower() == "true"
+WS_STREAM_FPS = float(os.getenv("WS_STREAM_FPS", 0.5))  # Frames por segundo para WebSocket
+
 # ====================================
 # VALIDACIÓN
 # ====================================

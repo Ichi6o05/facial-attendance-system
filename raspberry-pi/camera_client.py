@@ -13,12 +13,21 @@ import RPi.GPIO as GPIO
 from flask import Flask, Response
 import threading
 import io
+import asyncio
+import json
+try:
+    import websockets
+    WS_AVAILABLE = True
+except ImportError:
+    WS_AVAILABLE = False
+    print("⚠️ websockets no disponible - Instalarlo con: pip install websockets")
 
 from config import (
     SERVER_URL, DEVICE_ID, FRAME_WIDTH, FRAME_HEIGHT,
     CAPTURE_INTERVAL, JPEG_QUALITY, REQUEST_TIMEOUT,
     LED_GREEN_PIN, LED_RED_PIN, LED_DURATION,
-    ENABLE_WEB_STREAM, WEB_STREAM_PORT
+    ENABLE_WEB_STREAM, WEB_STREAM_PORT,
+    ENABLE_WS_STREAMING, WS_STREAM_FPS, WS_URL, WS_RECONNECT_DELAY
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -142,16 +151,80 @@ class PiCliente:
         elif status == 'error':
             self.control_led("red", LED_DURATION)
 
+    async def stream_video_websocket(self):
+        """
+        Streaming de video via WebSocket para frontend
+        Envía frames a 0.5 FPS (cada 2 segundos)
+        """
+        if not WS_AVAILABLE:
+            logger.warning("WebSocket streaming deshabilitado: librería websockets no disponible")
+            return
+
+        ws_url = f"{WS_URL}/{DEVICE_ID}"
+        logger.info(f"🔌 Iniciando WebSocket streaming a: {ws_url}")
+
+        while True:
+            try:
+                async with websockets.connect(ws_url) as websocket:
+                    logger.info(f"✅ WebSocket conectado para streaming")
+
+                    last_frame_time = 0
+                    frame_interval = 1.0 / WS_STREAM_FPS  # Intervalo entre frames
+
+                    while True:
+                        current_time = time.time()
+
+                        # Enviar frame solo si pasó el intervalo
+                        if current_time - last_frame_time >= frame_interval:
+                            frame = self.get_frame()
+                            if frame:
+                                # Codificar a base64
+                                frame_b64 = base64.b64encode(frame).decode('utf-8')
+
+                                # Crear mensaje
+                                mensaje = {
+                                    "type": "video_frame",
+                                    "frame": frame_b64,
+                                    "timestamp": current_time,
+                                    "device_id": DEVICE_ID
+                                }
+
+                                # Enviar
+                                await websocket.send(json.dumps(mensaje))
+                                last_frame_time = current_time
+
+                        # Pequeña pausa para no saturar
+                        await asyncio.sleep(0.1)
+
+            except websockets.exceptions.WebSocketException as e:
+                logger.error(f"❌ Error WebSocket streaming: {e}")
+                logger.info(f"🔄 Reconectando en {WS_RECONNECT_DELAY} segundos...")
+                await asyncio.sleep(WS_RECONNECT_DELAY)
+            except Exception as e:
+                logger.error(f"❌ Error inesperado en WebSocket streaming: {e}")
+                await asyncio.sleep(WS_RECONNECT_DELAY)
+
     def run(self):
         """Bucle principal de captura y envío"""
         logger.info("\n" + "="*50)
         logger.info("🚀 STREAMING ACTIVO @ 30 FPS")
         logger.info("="*50 + "\n")
 
+        # Iniciar WebSocket streaming en thread separado si está habilitado
+        if ENABLE_WS_STREAMING and WS_AVAILABLE:
+            def run_ws_streaming():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                loop.run_until_complete(self.stream_video_websocket())
+
+            ws_thread = threading.Thread(target=run_ws_streaming, daemon=True)
+            ws_thread.start()
+            logger.info(f"📡 WebSocket streaming iniciado ({WS_STREAM_FPS} FPS)")
+
         try:
             while True:
                 self.frame_count += 1
-                
+
                 # Enviar al servidor cada 1 segundo (no cada frame)
                 current_time = time.time()
                 if current_time - self.last_send_time >= 1.0:
