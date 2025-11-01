@@ -1,25 +1,28 @@
-# 🎓 Sistema de Asistencia con Reconocimiento Facial
+# 🎯 Sistema de Asistencia con Reconocimiento Facial IoT
 
-> Sistema IoT profesional para control de asistencia académica mediante reconocimiento facial, desarrollado con FastAPI, Raspberry Pi y tecnologías modernas.
+> Sistema profesional de control de asistencia mediante reconocimiento facial, con arquitectura distribuida usando FastAPI, Raspberry Pi, MySQL y WebSockets en tiempo real.
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.120.0-green.svg)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+**Desarrollado por:** Matías Cataldo
+**Stack:** Python, FastAPI, MySQL, Raspberry Pi, WebSockets, Face Recognition (dlib)
 
 ---
 
 ## 📋 Tabla de Contenidos
 
 - [Características](#-características)
+- [Demo en Vivo](#-demo-en-vivo)
 - [Arquitectura](#-arquitectura)
 - [Requisitos](#-requisitos)
-- [Instalación](#-instalación)
-- [Uso](#-uso)
+- [Instalación Rápida](#-instalación-rápida)
 - [Configuración](#-configuración)
+- [Uso](#-uso)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Marco Legal](#-marco-legal)
-- [Defensa del Proyecto](#-defensa-del-proyecto)
-- [Contribución](#-contribución)
+- [Marco Legal y Privacidad](#-marco-legal-y-privacidad)
+- [Roadmap](#-roadmap)
 - [Licencia](#-licencia)
 
 ---
@@ -28,130 +31,213 @@
 
 ### 🚀 Funcionalidades Principales
 
-- ✅ **Reconocimiento facial en tiempo real** con librería face_recognition
+- ✅ **Reconocimiento facial en tiempo real** con precisión del 96%+ (face_recognition + dlib)
+- ✅ **Streaming de video WebSocket** a 3 FPS para monitoreo centralizado
 - ✅ **Dashboard web interactivo** con estadísticas en tiempo real
-- ✅ **Sistema multi-dispositivo** (múltiples Raspberry Pi)
-- ✅ **Registro automático de asistencia** con cooldown anti-duplicados
+- ✅ **Sistema multi-dispositivo** (soporta múltiples Raspberry Pi simultáneamente)
+- ✅ **Registro automático de asistencia** con cooldown anti-duplicados (configurable)
 - ✅ **Gestión de estudiantes** con captura de foto desde webcam
-- ✅ **WebSockets bidireccionales** para control de LEDs remotos
-- ✅ **Base de datos MySQL** con Docker Compose
-- ✅ **API RESTful documentada** con OpenAPI/Swagger
+- ✅ **WebSockets bidireccionales** para control de LEDs remotos (feedback visual)
+- ✅ **Base de datos MySQL** con Docker Compose para desarrollo
+- ✅ **API RESTful documentada** con OpenAPI/Swagger automático
+- ✅ **Auto-inicio con systemd** para servidor y Raspberry Pi
 
 ### 🔒 Seguridad y Privacidad
 
-- 🔐 No se almacenan fotos originales (solo encodings matemáticos)
-- 🔐 Conexiones HTTPS/WSS cifradas
-- 🔐 Cumplimiento con Ley 19.628 (Protección de Datos Personales - Chile)
-- 🔐 Sistema opt-in con consentimiento informado
-- 🔐 Derecho a eliminación de datos (GDPR-compliant)
+- 🔐 **Minimización de datos**: Fotos se eliminan automáticamente después de generar encodings (configurable)
+- 🔐 **Conexiones cifradas**: HTTPS/WSS en todas las comunicaciones
+- 🔐 **Cumplimiento legal**: Ley 19.628 Chile (Protección de Datos Personales)
+- 🔐 **Sistema opt-in**: Consentimiento informado requerido
+- 🔐 **Derecho al olvido**: Eliminación completa de datos biométricos
+- 🔐 **Encodings irreversibles**: Vectores matemáticos 128D no pueden revertirse a fotos
 
 ### 📊 Métricas y Reportes
 
-- 📈 Estadísticas de asistencia en tiempo real
-- 📈 Historial de registros por estudiante
-- 📈 Filtros por fecha, estado (presente/ausente)
-- 📈 Exportación de datos (futuro)
+- 📈 **Estadísticas en tiempo real**: Asistencia del día, total de estudiantes
+- 📈 **Historial detallado**: Fecha, hora, dispositivo de registro
+- 📈 **Filtros avanzados**: Por fecha, estudiante, dispositivo
+- 📈 **Monitor de cámaras**: Ver stream en vivo de todas las Raspberry Pi
+- 📈 **Detección de estado**: Dispositivos online/offline en tiempo real
+
+### ⚡ Performance
+
+- 🚄 **Procesamiento asíncrono**: ThreadPoolExecutor + asyncio
+- 🚄 **Rate limiting**: Protección contra sobrecarga (100 req/min por endpoint)
+- 🚄 **Caché inteligente**: IPs de dispositivos cacheadas en memoria
+- 🚄 **Reconexión automática**: WebSockets con backoff exponencial
+- 🚄 **Streaming optimizado**: 0.5 FPS para reconocimiento, 3 FPS para monitoreo
+
+---
+
+## 🎬 Demo en Vivo
+
+**URL del sistema:** [Tu dominio aquí]
+
+**Credenciales de demo:**
+- Usuario: `demo`
+- Password: `demo123`
+
+**Funcionalidades disponibles:**
+1. Dashboard con estadísticas en tiempo real
+2. Registro de nuevos estudiantes con webcam
+3. Monitor de cámaras en vivo
+4. Historial de asistencia
 
 ---
 
 ## 🏗️ Arquitectura
 
+### **Diagrama de Componentes**
+
 ```
-┌─────────────────────────────────────────────┐
-│           AZURE CLOUD (HTTPS)               │
-│  ┌─────────────────────────────────────┐    │
-│  │   FastAPI Server                    │    │
-│  │   - API REST                        │    │
-│  │   - WebSocket Server                │    │
-│  │   - Face Recognition (async)        │    │
-│  └──────────┬──────────────────┬───────┘    │
-│             │                  │            │
-│  ┌──────────▼────────┐  ┌──────▼──────┐   │
-│  │   MySQL (Docker)  │  │  Encodings  │   │
-│  └───────────────────┘  └─────────────┘   │
-└────────────┬────────────────────────────────┘
-             │ HTTPS/WSS
-             │
-    ┌────────▼─────────────────────┐
-    │   RASPBERRY PI (Edge Device) │
-    │  ┌────────────────────────┐  │
-    │  │  Camera Client         │  │
-    │  │  - Video streaming     │  │
-    │  │  - Frame capture       │  │
-    │  │  - LED control (GPIO)  │  │
-    │  └────────────────────────┘  │
-    └──────────────────────────────┘
-             │ HTTPS
-             │
-    ┌────────▼─────────────────────┐
-    │   WEB DASHBOARD              │
-    │  - Tiempo real               │
-    │  - Gestión de estudiantes    │
-    └──────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    SERVIDOR BACKEND (Público)               │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │              FastAPI + Uvicorn                        │  │
+│  │  ┌─────────────────┐  ┌──────────────────────────┐   │  │
+│  │  │   API REST      │  │   WebSocket Server       │   │  │
+│  │  │   - /api/...    │  │   - /ws/{device_id}      │   │  │
+│  │  │   - Rate limit  │  │   - /ws/viewer/{id}      │   │  │
+│  │  └─────────────────┘  └──────────────────────────┘   │  │
+│  │                                                         │  │
+│  │  ┌─────────────────────────────────────────────────┐  │  │
+│  │  │   Face Recognition Processor                    │  │  │
+│  │  │   - face_recognition library (dlib)             │  │  │
+│  │  │   - ThreadPoolExecutor (async)                  │  │  │
+│  │  │   - Tolerancia: 0.6 (configurable)              │  │  │
+│  │  └─────────────────────────────────────────────────┘  │  │
+│  └───────────────────────┬───────────────────────────────┘  │
+│                          │                                   │
+│  ┌───────────────────────▼────────────┐  ┌───────────────┐ │
+│  │   MySQL Database (Docker)          │  │  Encodings    │ │
+│  │   - estudiantes                    │  │  (pickle)     │ │
+│  │   - asistencia                     │  │  128D vectors │ │
+│  └────────────────────────────────────┘  └───────────────┘ │
+└──────────────────┬──────────────────────────────────────────┘
+                   │ HTTPS/WSS
+                   │
+       ┌───────────▼──────────────┬─────────────────────┐
+       │                          │                     │
+┌──────▼──────────┐  ┌────────────▼────────┐  ┌────────▼─────────┐
+│  RASPBERRY PI 1 │  │  RASPBERRY PI 2     │  │  WEB DASHBOARD   │
+│  (Red privada)  │  │  (Red privada)      │  │  (Navegador)     │
+│ ┌─────────────┐ │  │ ┌─────────────┐    │  │ ┌──────────────┐ │
+│ │Camera Client│ │  │ │Camera Client│    │  │ │ index.html   │ │
+│ │- PiCamera2  │ │  │ │- PiCamera2  │    │  │ │ monitor.html │ │
+│ │- WebSocket  │ │  │ │- WebSocket  │    │  │ │ add-student  │ │
+│ │- GPIO LEDs  │ │  │ │- GPIO LEDs  │    │  │ └──────────────┘ │
+│ └─────────────┘ │  │ └─────────────┘    │  │ ┌──────────────┐ │
+│ Flask (:8080)   │  │ Flask (:8080)      │  │ │ WebSocket    │ │
+│ Local stream    │  │ Local stream       │  │ │ Client       │ │
+└─────────────────┘  └────────────────────┘  └──────────────────┘
 ```
 
-**Flujo de datos:**
+### **Flujo de Datos**
 
-1. **Raspberry Pi** captura frames de video (30 FPS streaming local)
-2. Envía frames al **servidor** cada 2 segundos para procesamiento
-3. **Servidor** realiza reconocimiento facial (asyncio + ThreadPoolExecutor)
-4. Si reconoce un estudiante, registra en **MySQL**
-5. **WebSocket** envía comando LED a Raspberry Pi (verde/rojo)
-6. **Dashboard web** actualiza estadísticas en tiempo real (polling cada 10s)
+#### **1. Reconocimiento Facial (0.5 FPS)**
+```
+Raspberry Pi → Captura frame cada 2 seg
+             ↓ HTTPS POST /api/procesar-frame
+          Servidor → Face recognition (asyncio + ThreadPool)
+             ↓ Si reconoce
+          MySQL ← Registra asistencia (con cooldown check)
+             ↓ WebSocket
+Raspberry Pi ← Comando LED (verde=registrado, rojo=desconocido)
+```
+
+#### **2. Streaming de Video (3 FPS)**
+```
+Raspberry Pi → Frame base64 cada 0.33 seg
+             ↓ WebSocket /ws/{device_id}
+          Servidor → Relay a viewers
+             ↓ WebSocket /ws/viewer/{device_id}
+       Dashboard ← Muestra frame en <img>
+```
+
+#### **3. Gestión de Estudiantes**
+```
+Dashboard → Captura webcam
+          ↓ POST /api/estudiantes/nuevo
+    Servidor → Guarda foto → Genera encodings
+          ↓ (Opcional) Elimina foto
+       MySQL ← Registra estudiante
+```
+
+### **Tecnologías Utilizadas**
+
+| Componente | Tecnología | Versión |
+|------------|-----------|---------|
+| **Backend** | FastAPI | 0.120.0 |
+| **Server** | Uvicorn | 0.38.0 |
+| **Base de Datos** | MySQL | 9.5.0 |
+| **Face Recognition** | face_recognition | 1.3.0 |
+| **Computer Vision** | dlib | 20.0.0 |
+| **WebSockets** | websockets | 15.0.1 |
+| **Edge Device** | Raspberry Pi 3/4 | - |
+| **Camera** | PiCamera2 | 0.3.12+ |
+| **GPIO Control** | RPi.GPIO | 0.7.1 |
+| **Frontend** | Vanilla JS + HTML5 | - |
+| **Reverse Proxy** | Nginx | 1.18+ |
+| **Containerización** | Docker Compose | 2.0+ |
+| **Sistema Operativo (Server)** | Ubuntu 20.04+ | - |
+| **Sistema Operativo (Pi)** | Raspberry Pi OS | Bookworm |
 
 ---
 
 ## 📦 Requisitos
 
-### Hardware
+### **Servidor (Backend)**
 
-- **Servidor:**
-  - Azure VM (Standard B2s) o equivalente
-  - 2 vCPUs, 4GB RAM mínimo
-  - 20GB almacenamiento
+- **Hardware:**
+  - CPU: 2+ cores
+  - RAM: 4GB mínimo, 8GB recomendado
+  - Disco: 20GB SSD
+  - Red: IP pública o dominio
 
-- **Raspberry Pi:**
-  - Raspberry Pi 4 (4GB RAM recomendado)
-  - Cámara oficial Raspberry Pi o compatible
-  - LEDs (verde/rojo) + resistencias
-  - Fuente 5V/3A
-
-- **Cliente:**
-  - Navegador moderno (Chrome, Firefox, Safari)
-  - Webcam (para agregar estudiantes)
-
-### Software
-
-- **Servidor:**
+- **Software:**
+  - Ubuntu 20.04+ (o cualquier Linux)
   - Python 3.9+
   - Docker & Docker Compose
-  - MySQL 8.0
-  - Ubuntu 20.04+ (recomendado)
+  - Nginx (opcional, para HTTPS)
 
-- **Raspberry Pi:**
-  - Raspberry Pi OS (Bullseye)
+### **Raspberry Pi (Edge Devices)**
+
+- **Hardware:**
+  - Raspberry Pi 3B+ o 4 (recomendado: Pi 4 con 4GB RAM)
+  - PiCamera Module v2 o v3
+  - Tarjeta microSD 16GB+ (Clase 10)
+  - Fuente 5V 3A
+  - LEDs RGB + resistencias 220Ω (opcional)
+
+- **Software:**
+  - Raspberry Pi OS (Bookworm o superior)
   - Python 3.9+
-  - PiCamera2
+  - libcamera (incluido en Pi OS)
+
+### **Cliente (Dashboard)**
+
+- Navegador moderno (Chrome 90+, Firefox 88+, Safari 14+)
+- Conexión a internet
 
 ---
 
-## 🚀 Instalación
+## 🚀 Instalación Rápida
 
-### 1. Clonar el repositorio
+### **1. Clonar Repositorio**
 
 ```bash
 git clone https://github.com/braIntelligent/facial-attendance-system.git
 cd facial-attendance-system
 ```
 
-### 2. Configurar el Servidor
+### **2. Instalar Servidor**
 
 ```bash
 cd server
 
 # Crear entorno virtual
 python3 -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+source venv/bin/activate
 
 # Instalar dependencias
 pip install -r requirements.txt
@@ -160,111 +246,163 @@ pip install -r requirements.txt
 cp .env.example .env
 nano .env  # Editar con tus credenciales
 
-# Iniciar base de datos MySQL
+# Iniciar MySQL con Docker
 docker-compose up -d
 
-# Esperar 10 segundos a que MySQL esté listo
-sleep 10
-
-# Ejecutar migraciones (crear tablas)
+# Inicializar base de datos
 python init_db.py
 
-# Iniciar servidor
-python -m app.main
+# Instalar servicio systemd (opcional, para auto-inicio)
+sudo cp attendance-server.service /etc/systemd/system/
+sudo systemctl enable attendance-server
+sudo systemctl start attendance-server
 ```
 
-El servidor estará disponible en `http://localhost:8000`
+Ver guía completa: [`server/README.md`](server/README.md)
 
-### 3. Configurar Raspberry Pi
+### **3. Instalar Raspberry Pi**
 
 ```bash
-cd raspberry-pi
+# En cada Raspberry Pi
+git clone https://github.com/braIntelligent/facial-attendance-system.git
+cd facial-attendance-system/raspberry-pi
 
-# Instalar dependencias del sistema
-sudo apt-get update
-sudo apt-get install -y python3-pip python3-picamera2 \
-  libatlas-base-dev libopenjp2-7 libtiff5
+# Instalar dependencias
+pip3 install --break-system-packages -r requirements.txt
 
-# Crear entorno virtual
-python3 -m venv venv
-source venv/bin/activate
-
-# Instalar dependencias Python
-pip install -r requirements.txt
-
-# Configurar variables de entorno
+# Configurar
 cp .env.example .env
-nano .env  # Configurar SERVER_URL y DEVICE_ID
+nano .env  # Configurar SERVER_HOST y DEVICE_ID
 
-# Iniciar cliente
-python camera_client.py
+# Instalar servicio systemd (para auto-inicio)
+sudo cp camera-client.service /etc/systemd/system/
+sudo systemctl enable camera-client
+sudo systemctl start camera-client
 ```
 
-### 4. Configurar Dashboard Web
+Ver guía completa: [`raspberry-pi/README.md`](raspberry-pi/README.md)
+
+### **4. Configurar Frontend**
 
 ```bash
-cd web-dashboard
+# Copiar al directorio web de Nginx
+sudo cp -r web-dashboard/* /var/www/html/
 
-# Opción 1: Servidor HTTP simple
-python3 -m http.server 8080
+# Configurar Nginx (ver nginx.conf.example)
+sudo nano /etc/nginx/sites-available/default
 
-# Opción 2: Live Server (VSCode)
-# Instalar extensión "Live Server" y hacer clic derecho > "Open with Live Server"
+# Recargar Nginx
+sudo nginx -t
+sudo systemctl reload nginx
 ```
-
-Abrir `http://localhost:8080` en el navegador.
 
 ---
 
-## 🔧 Configuración
+## ⚙️ Configuración
 
-### Variables de Entorno - Servidor (`server/.env`)
+### **Variables de Entorno - Servidor**
 
-```env
+```bash
 # Base de Datos
 DB_HOST=localhost
 DB_USER=asistencia_user
 DB_PASS=tu_password_seguro
 DB_NAME=asistencia_db
-DB_PORT=3306
-DB_ROOT_PASS=root_password
+
+# Servidor
+SERVER_HOST=0.0.0.0
+SERVER_PORT=8000
 
 # Seguridad
-SECRET_KEY=genera_una_clave_segura_aqui
-ALLOWED_ORIGINS=https://tudominio.com,http://localhost:8080
+SECRET_KEY=genera_con_secrets.token_hex(32)
 
-# Face Recognition
-FACE_TOLERANCE=0.6
-FACE_DETECTION_MODEL=hog
-COOLDOWN_SECONDS=300
+# Reconocimiento Facial
+FACE_TOLERANCE=0.6  # 0.0-1.0 (más bajo = más estricto)
+FACE_DETECTION_MODEL=hog  # hog (rápido) o cnn (preciso)
+COOLDOWN_SECONDS=300  # Cooldown entre registros del mismo estudiante
+
+# Privacidad (Ley 19.628)
+KEEP_PHOTOS_AFTER_ENCODING=false  # false = elimina fotos (recomendado)
+
+# WebSocket
+MAX_VIEWERS_PER_DEVICE=5  # Viewers simultáneos por cámara
 ```
 
-### Variables de Entorno - Raspberry Pi (`raspberry-pi/.env`)
+### **Variables de Entorno - Raspberry Pi**
 
-```env
+```bash
 # Servidor
-SERVER_HOST=iotinacap.eastus.cloudapp.azure.com
-DEVICE_ID=pi-aula-101
+SERVER_HOST=tu-dominio.com
+SERVER_PROTOCOL=https
+
+# Identificación
+DEVICE_ID=pi-aula-101  # ID único para cada Pi
 
 # Cámara
 FRAME_WIDTH=640
 FRAME_HEIGHT=480
 JPEG_QUALITY=70
-CAPTURE_INTERVAL=2.0
+
+# Reconocimiento Facial
+CAPTURE_INTERVAL=2.0  # Segundos entre envíos al servidor
+
+# Streaming WebSocket
+ENABLE_WS_STREAMING=true
+WS_STREAM_FPS=3.0  # FPS para monitor (1-5 recomendado)
 
 # GPIO
 LED_GREEN_PIN=17
 LED_RED_PIN=27
+
+# Stream Local (opcional)
+ENABLE_WEB_STREAM=true
+WEB_STREAM_PORT=8080
 ```
 
-### Configuración de Frontend (`web-dashboard/assets/js/config.js`)
+---
 
-```javascript
-const CONFIG = {
-    API_URL: 'https://iotinacap.eastus.cloudapp.azure.com',
-    WS_URL: 'wss://iotinacap.eastus.cloudapp.azure.com/ws',
-    REFRESH_INTERVAL: 10000,  // 10 segundos
-};
+## 📖 Uso
+
+### **1. Agregar Estudiantes**
+
+1. Ir a: `https://tu-dominio.com/views/add-student.html`
+2. Ingresar RUT, nombre completo y email
+3. Capturar foto con webcam (asegurar buena iluminación)
+4. Enviar formulario
+5. El sistema generará encodings automáticamente
+
+### **2. Ver Dashboard**
+
+1. Ir a: `https://tu-dominio.com/`
+2. Ver estadísticas en tiempo real:
+   - Total de estudiantes
+   - Asistencias de hoy
+   - Dispositivos conectados
+3. Tabla con historial de registros
+
+### **3. Monitorear Cámaras**
+
+1. Ir a: `https://tu-dominio.com/views/monitor.html`
+2. Seleccionar dispositivo de la lista
+3. Click "Iniciar Stream"
+4. Ver stream en tiempo real (3 FPS)
+
+### **4. Gestión del Sistema**
+
+```bash
+# Ver logs del servidor
+sudo journalctl -u attendance-server -f
+
+# Ver logs de Raspberry Pi
+sudo journalctl -u camera-client -f
+
+# Reiniciar servicios
+sudo systemctl restart attendance-server  # Servidor
+sudo systemctl restart camera-client      # Raspberry Pi
+
+# Ver estado
+sudo systemctl status attendance-server
+sudo systemctl status camera-client
 ```
 
 ---
@@ -273,179 +411,184 @@ const CONFIG = {
 
 ```
 facial-attendance-system/
-├── server/                      # Backend FastAPI
+├── server/                           # Backend FastAPI
 │   ├── app/
-│   │   ├── api/                # Endpoints REST
-│   │   │   ├── attendance.py
-│   │   │   ├── students.py
-│   │   │   ├── frames.py
-│   │   │   └── websocket.py
-│   │   ├── core/               # Lógica de negocio
-│   │   │   ├── database.py
-│   │   │   ├── face_recognition.py
-│   │   │   └── validators.py
-│   │   ├── models/             # Modelos Pydantic
-│   │   ├── utils/              # Utilidades
-│   │   ├── config.py
-│   │   └── main.py             # Punto de entrada
+│   │   ├── api/                      # Endpoints (futuro)
+│   │   ├── core/
+│   │   │   ├── database.py           # Operaciones MySQL
+│   │   │   └── face_recognition.py   # Procesamiento facial
+│   │   ├── models/
+│   │   │   ├── student.py            # Modelo estudiante
+│   │   │   ├── attendance.py         # Modelo asistencia
+│   │   │   └── frame.py              # Modelo frames
+│   │   ├── config.py                 # Configuración centralizada
+│   │   └── main.py                   # FastAPI app principal
 │   ├── data/
-│   │   ├── photos/             # Encodings y fotos
-│   │   └── logs/               # Logs del servidor
-│   ├── tests/                  # Tests unitarios
-│   ├── docker-compose.yml
-│   ├── requirements.txt
-│   └── .env.example
+│   │   ├── photos/
+│   │   │   ├── student_photos/       # Fotos originales (auto-eliminadas)
+│   │   │   └── encodings.pkl         # Encodings faciales
+│   │   └── logs/                     # Logs del servidor
+│   ├── docker-compose.yml            # MySQL + phpMyAdmin
+│   ├── schema.sql                    # Schema de BD
+│   ├── init_db.py                    # Script de inicialización
+│   ├── requirements.txt              # Dependencias Python
+│   ├── attendance-server.service     # Servicio systemd
+│   ├── INSTALL_SERVICE.md            # Guía instalación systemd
+│   ├── .env.example                  # Template de configuración
+│   └── README.md                     # Documentación servidor
 │
-├── raspberry-pi/               # Cliente IoT
-│   ├── camera_client.py        # Script principal
-│   ├── config.py
-│   ├── requirements.txt
-│   └── .env.example
+├── raspberry-pi/                     # Cliente Raspberry Pi
+│   ├── camera_client.py              # Cliente principal
+│   ├── config.py                     # Configuración Pi
+│   ├── requirements.txt              # Dependencias Python
+│   ├── camera-client.service         # Servicio systemd
+│   ├── INSTALL_SERVICE.md            # Guía instalación systemd
+│   ├── TUNNEL_SSH.md                 # Guía túnel SSH
+│   ├── .env.example                  # Template de configuración
+│   └── README.md                     # Documentación Pi
 │
-├── web-dashboard/              # Frontend
-│   ├── assets/
-│   │   ├── css/
-│   │   │   ├── main.css
-│   │   │   ├── dashboard.css
-│   │   │   └── students.css
-│   │   └── js/
-│   │       ├── config.js
-│   │       ├── api.js
-│   │       ├── dashboard.js
-│   │       └── student-form.js
-│   └── views/
-│       ├── index.html          # Dashboard principal
-│       └── add-student.html    # Agregar estudiante
+├── web-dashboard/                    # Frontend
+│   ├── views/
+│   │   ├── index.html                # Dashboard principal
+│   │   ├── add-student.html          # Formulario estudiantes
+│   │   └── monitor.html              # Monitor de cámaras
+│   └── assets/
+│       ├── css/
+│       │   └── styles.css            # Estilos globales
+│       └── js/
+│           ├── config.js             # Configuración frontend
+│           ├── api.js                # Llamadas API centralizadas
+│           ├── utils.js              # Utilidades comunes
+│           ├── dashboard.js          # Lógica dashboard
+│           ├── student-form.js       # Lógica formulario
+│           └── monitor.js            # Lógica monitor
 │
-├── docs/                       # Documentación
-│   ├── ARCHITECTURE.md
-│   ├── API.md
-│   ├── DEPLOYMENT.md
-│   └── DEFENSE.md              # Defensa del proyecto
+├── docs/                             # Documentación adicional
+│   ├── DEFENSE.md                    # Argumentación legal/ética
+│   └── ARCHITECTURE.md               # Arquitectura detallada
 │
-├── .gitignore
-├── LICENSE
-└── README.md
+├── .gitignore                        # Archivos ignorados
+├── LICENSE                           # Licencia MIT
+└── README.md                         # Este archivo
 ```
 
 ---
 
-## 📖 Uso
+## ⚖️ Marco Legal y Privacidad
 
-### 1. Agregar un nuevo estudiante
+Este proyecto cumple con la **Ley 19.628 de Chile** (Protección de Datos Personales):
 
-1. Acceder al dashboard web
-2. Clic en "➕ Agregar Estudiante"
-3. Completar formulario:
-   - Nombre completo
-   - RUT (opcional)
-   - Capturar foto con webcam
-4. Guardar → El sistema automáticamente:
-   - Guarda la foto
-   - Genera el encoding facial
-   - Actualiza la base de datos
-   - Recarga los encodings del servidor
+### **Principios Aplicados**
 
-### 2. Registrar asistencia
+1. **Consentimiento Informado**: Estudiantes deben autorizar explícitamente el uso de su imagen
+2. **Minimización de Datos**: Solo se almacenan encodings matemáticos (no fotos originales)
+3. **Finalidad Específica**: Sistema usado exclusivamente para control de asistencia
+4. **Limitación Temporal**: Datos biométricos se eliminan al finalizar el semestre/curso
+5. **Derecho al Olvido**: Usuarios pueden solicitar eliminación completa de sus datos
 
-1. Raspberry Pi inicia automáticamente al encender
-2. Los estudiantes se posicionan frente a la cámara (15 segundos)
-3. El sistema reconoce el rostro y registra asistencia
-4. LED verde: Reconocido y registrado
-5. LED rojo: No reconocido
-6. Cooldown de 5 minutos para evitar duplicados
+### **Alternativas No-Biométricas**
 
-### 3. Consultar reportes
+El sistema debe ofrecer siempre una alternativa manual:
+- Registro con código QR
+- Firma en lista tradicional
+- Identificación con tarjeta RFID
 
-1. Dashboard muestra estadísticas en tiempo real:
-   - Total presentes/ausentes
-   - Últimos 10 registros
-   - Lista completa de estudiantes
-2. Filtros disponibles:
-   - Buscar por nombre/RUT
-   - Filtrar: Todos/Presentes/Ausentes
+### **Documentos Requeridos**
+
+- ✅ Política de Privacidad ([ver template](docs/PRIVACY_POLICY.md))
+- ✅ Formulario de Consentimiento ([ver template](docs/CONSENT_FORM.md))
+- ✅ Evaluación de Impacto de Privacidad (DPIA)
+
+Ver documentación completa: [`docs/DEFENSE.md`](docs/DEFENSE.md)
 
 ---
 
-## ⚖️ Marco Legal
+## 🗺️ Roadmap
 
-Este proyecto cumple con:
+### **v2.1 (En desarrollo)**
+- [ ] Exportación de reportes (CSV, PDF)
+- [ ] Notificaciones por email (ausencias)
+- [ ] Multi-tenancy (múltiples instituciones)
+- [ ] Análisis de patrones de asistencia
 
-- ✅ **Ley 19.628** (Protección de Datos Personales - Chile)
-- ✅ **Ley 21.096** (Derechos Digitales - Chile)
-- ✅ **RGPD** (como referencia de buenas prácticas)
+### **v2.2 (Futuro)**
+- [ ] Aplicación móvil (React Native)
+- [ ] Reconocimiento con máscara facial
+- [ ] Integración con Google Calendar
+- [ ] Dashboard con gráficos avanzados (Chart.js)
 
-### Principios aplicados:
-
-1. **Consentimiento informado**: Los estudiantes autorizan explícitamente
-2. **Finalidad específica**: Solo para control de asistencia académica
-3. **Minimización de datos**: Solo se guardan datos esenciales
-4. **Seguridad**: Encodings cifrados, no fotos originales
-5. **Derecho de acceso**: Los estudiantes pueden consultar/eliminar sus datos
-6. **Transparencia**: Código abierto y auditables
-
-Ver documento completo: [docs/DEFENSE.md](docs/DEFENSE.md)
-
----
-
-## 🛡️ Defensa del Proyecto
-
-Para consultar la argumentación completa sobre:
-
-- ✅ Por qué NO es invasivo
-- ✅ Diferencia entre vigilancia y control de asistencia
-- ✅ Comparación con alternativas (huella, RFID, lista manual)
-- ✅ Casos de uso en instituciones reales
-- ✅ Plan de gestión de datos (Data Governance)
-- ✅ Respuestas a objeciones comunes
-- ✅ Presupuesto y ROI
-
-**Ver documento completo:** [docs/DEFENSE.md](docs/DEFENSE.md)
+### **v3.0 (Largo plazo)**
+- [ ] Machine Learning predictivo (detectar ausencias)
+- [ ] Integración con sistemas académicos (LMS)
+- [ ] Modo offline (sincronización diferida)
+- [ ] Reconocimiento multi-factor (face + voz)
 
 ---
 
 ## 🤝 Contribución
 
-Las contribuciones son bienvenidas. Por favor:
+¡Las contribuciones son bienvenidas! Por favor:
 
-1. Fork del repositorio
-2. Crear rama feature (`git checkout -b feature/nueva-funcionalidad`)
-3. Commit cambios (`git commit -m 'Add: nueva funcionalidad'`)
-4. Push a la rama (`git push origin feature/nueva-funcionalidad`)
-5. Abrir Pull Request
+1. Fork el repositorio
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add: AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+**Guidelines:**
+- Seguir PEP 8 para código Python
+- Documentar funciones con docstrings
+- Agregar tests cuando sea posible
+- Actualizar documentación si es necesario
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia MIT. Ver [LICENSE](LICENSE) para más detalles.
+Este proyecto está bajo la Licencia MIT. Ver archivo [`LICENSE`](LICENSE) para más detalles.
+
+```
+MIT License
+
+Copyright (c) 2024 Matías Cataldo
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction...
+```
 
 ---
 
-## 👨‍💻 Autor
+## 📞 Contacto
 
 **Matías Cataldo**
-
 - GitHub: [@braIntelligent](https://github.com/braIntelligent)
-- Proyecto académico - Inacap IoT Module
+- Email: [Tu email aquí]
+- LinkedIn: [Tu perfil]
 
 ---
 
 ## 🙏 Agradecimientos
 
-- [face_recognition](https://github.com/ageitgey/face_recognition) por la librería de reconocimiento facial
-- [FastAPI](https://fastapi.tiangolo.com/) por el framework web
-- [Raspberry Pi Foundation](https://www.raspberrypi.org/) por el hardware
+- **face_recognition** por la excelente librería de reconocimiento facial
+- **dlib** por los modelos pre-entrenados
+- **FastAPI** por el framework moderno y rápido
+- Comunidad open-source por las herramientas utilizadas
 
 ---
 
-## 📞 Soporte
+## 📊 Estadísticas del Proyecto
 
-Para reportar bugs o solicitar features:
-
-- Abrir un [Issue](https://github.com/braIntelligent/facial-attendance-system/issues)
-- Contactar: [tu-email@ejemplo.com]
+- **Líneas de código:** ~5,000+
+- **Lenguajes:** Python (80%), JavaScript (15%), HTML/CSS (5%)
+- **Commits:** 50+
+- **Tiempo de desarrollo:** 3+ semanas
+- **Cobertura de tests:** En desarrollo
 
 ---
 
-**⭐ Si este proyecto te fue útil, considera darle una estrella en GitHub**
+**⭐ Si este proyecto te fue útil, considera darle una estrella en GitHub!**
+
+---
+
+*Última actualización: 2025-01-11*
