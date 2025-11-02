@@ -12,7 +12,7 @@ load_dotenv()
 # CONFIGURACIÓN DEL SERVIDOR
 # ====================================
 
-SERVER_HOST = os.getenv("SERVER_HOST", "iotinacap.eastus.cloudapp.azure.com")
+SERVER_HOST = os.getenv("SERVER_HOST")
 SERVER_PROTOCOL = os.getenv("SERVER_PROTOCOL", "https")
 SERVER_URL = f"{SERVER_PROTOCOL}://{SERVER_HOST}"
 WS_URL = f"wss://{SERVER_HOST}/ws" if SERVER_PROTOCOL == "https" else f"ws://{SERVER_HOST}/ws"
