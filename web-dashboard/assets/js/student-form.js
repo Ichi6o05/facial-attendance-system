@@ -19,6 +19,58 @@ let inputRut;
 // INICIALIZACION
 // ==============================================
 
+// Validación básica de RUT chileno
+function validarRut(rut) {
+    // Limpiar puntos y guion
+    rut = rut.replace(/\./g, '').replace(/-/g, '');
+    if(rut.length < 2) return false;
+
+    const cuerpo = rut.slice(0, -1);
+    let dv = rut.slice(-1).toUpperCase();
+
+    let suma = 0;
+    let multiplo = 2;
+
+    for (let i = cuerpo.length - 1; i >= 0; i--) {
+        suma += parseInt(cuerpo.charAt(i)) * multiplo;
+        multiplo = multiplo === 7 ? 2 : multiplo + 1;
+    }
+
+    const dvEsperado = 11 - (suma % 11);
+    let dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+
+    return dv === dvCalculado;
+}
+
+// Elemento donde mostrar mensaje de validación
+let rutFeedback = null;
+
+// Inicialización al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    if (inputRut) {
+        // Crear un span para feedback si no existe
+        rutFeedback = document.createElement('span');
+        rutFeedback.style.fontSize = '0.9em';
+        rutFeedback.style.marginLeft = '8px';
+        inputRut.parentNode.appendChild(rutFeedback);
+
+        // Escuchar cambios en el input
+        inputRut.addEventListener('input', () => {
+            const rutValido = validarRut(inputRut.value.trim());
+            if (rutValido) {
+                rutFeedback.textContent = '✔ RUT válido';
+                rutFeedback.style.color = 'green';
+            } else {
+                rutFeedback.textContent = '❌ RUT inválido';
+                rutFeedback.style.color = 'red';
+            }
+
+            // Habilitar/deshabilitar botón guardar
+            btnGuardar.disabled = !rutValido || !fotoPreviewEl.src || fotoPreviewEl.src === window.location.href || !inputNombre.value.trim();
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Formulario de estudiante iniciado');
 
@@ -162,6 +214,16 @@ async function guardarEstudiante(e) {
 
     const nombre = inputNombre.value.trim();
     const rut = inputRut.value.trim();
+
+    if (!rut) {
+    mostrarToast('El RUT es obligatorio', 'error');
+    return;
+    }
+
+    if (!validarRut(rut)) {
+        mostrarToast('El RUT ingresado es inválido', 'error');
+        return;
+    }
 
     if (!nombre) {
         mostrarToast('El nombre es obligatorio', 'error');

@@ -24,7 +24,7 @@ except ImportError:
 
 from config import (
     SERVER_URL, DEVICE_ID, FRAME_WIDTH, FRAME_HEIGHT,
-    CAPTURE_INTERVAL, JPEG_QUALITY, REQUEST_TIMEOUT,
+    CAPTURE_INTERVAL, REQUEST_TIMEOUT,
     LED_GREEN_PIN, LED_RED_PIN, LED_DURATION,
     ENABLE_WEB_STREAM, WEB_STREAM_PORT,
     ENABLE_WS_STREAMING, WS_STREAM_FPS, WS_URL, WS_RECONNECT_DELAY
@@ -260,7 +260,7 @@ class PiCliente:
 
                 # Enviar al servidor cada 1 segundo (no cada frame)
                 current_time = time.time()
-                if current_time - self.last_send_time >= 1.0:
+                if current_time - self.last_send_time >= CAPTURE_INTERVAL:
                     frame = self.get_frame()
                     if frame:
                         self.enviar_frame_async(frame)

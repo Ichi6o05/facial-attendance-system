@@ -29,8 +29,7 @@ DEVICE_ID = os.getenv("DEVICE_ID", "pi-aula-101")
 
 FRAME_WIDTH = int(os.getenv("FRAME_WIDTH", 640))
 FRAME_HEIGHT = int(os.getenv("FRAME_HEIGHT", 480))
-JPEG_QUALITY = int(os.getenv("JPEG_QUALITY", 70))
-CAPTURE_INTERVAL = float(os.getenv("CAPTURE_INTERVAL", 2.0))
+CAPTURE_INTERVAL = float(os.getenv("CAPTURE_INTERVAL", 1.0))
 
 # ====================================
 # CONFIGURACIÓN GPIO
