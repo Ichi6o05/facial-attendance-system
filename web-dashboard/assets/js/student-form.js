@@ -47,33 +47,6 @@ let rutFeedback = null;
 
 // Inicialización al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
-    if (inputRut) {
-        // Crear un span para feedback si no existe
-        rutFeedback = document.createElement('span');
-        rutFeedback.style.fontSize = '0.9em';
-        rutFeedback.style.marginLeft = '8px';
-        inputRut.parentNode.appendChild(rutFeedback);
-
-        // Escuchar cambios en el input
-        inputRut.addEventListener('input', () => {
-            const rutValido = validarRut(inputRut.value.trim());
-            if (rutValido) {
-                rutFeedback.textContent = '✔ RUT válido';
-                rutFeedback.style.color = 'green';
-            } else {
-                rutFeedback.textContent = '❌ RUT inválido';
-                rutFeedback.style.color = 'red';
-            }
-
-            // Habilitar/deshabilitar botón guardar
-            btnGuardar.disabled = !rutValido || !fotoPreviewEl.src || fotoPreviewEl.src === window.location.href || !inputNombre.value.trim();
-        });
-    }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Formulario de estudiante iniciado');
-
     // Obtener referencias del DOM
     formAgregar = document.getElementById('form-agregar-estudiante');
     videoEl = document.getElementById('webcam-preview');
@@ -86,7 +59,28 @@ document.addEventListener('DOMContentLoaded', () => {
     inputNombre = document.getElementById('nombre-nuevo');
     inputRut = document.getElementById('rut-nuevo');
 
-    // Configurar event listeners
+    // Crear span para feedback del RUT
+    rutFeedback = document.createElement('span');
+    rutFeedback.style.fontSize = '0.9em';
+    rutFeedback.style.marginLeft = '8px';
+    inputRut.parentNode.appendChild(rutFeedback);
+
+    // Listener de RUT en tiempo real
+    inputRut.addEventListener('input', () => {
+        const rutValido = validarRut(inputRut.value.trim());
+        rutFeedback.textContent = rutValido ? '✔ RUT válido' : '❌ RUT inválido';
+        rutFeedback.style.color = rutValido ? 'green' : 'red';
+        // Habilitar botón guardar solo si todo es válido
+        btnGuardar.disabled = !rutValido || !inputNombre.value.trim() || !fotoPreviewEl.src || fotoPreviewEl.src === window.location.href;
+    });
+
+    // Listener de nombre también
+    inputNombre.addEventListener('input', () => {
+        const rutValido = validarRut(inputRut.value.trim());
+        btnGuardar.disabled = !rutValido || !inputNombre.value.trim() || !fotoPreviewEl.src || fotoPreviewEl.src === window.location.href;
+    });
+
+    // Configurar demás event listeners
     configurarEventListeners();
 });
 
