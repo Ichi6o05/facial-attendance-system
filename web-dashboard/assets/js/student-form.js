@@ -21,13 +21,23 @@ let inputRut;
 
 // Validación básica de RUT chileno
 function validarRut(rut) {
-    // Limpiar puntos y guion
-    rut = rut.replace(/\./g, '').replace(/-/g, '');
-    if(rut.length < 2) return false;
+    if (!rut) return false;
 
-    const cuerpo = rut.slice(0, -1);
-    let dv = rut.slice(-1).toUpperCase();
+    // Eliminar puntos y espacios, y pasar a mayúsculas
+    rut = rut.replace(/\./g, '').replace(/\s+/g, '').toUpperCase();
 
+    // Verificar que tenga guion
+    if (!rut.includes('-')) {
+        rut = rut.slice(0, -1) + '-' + rut.slice(-1);
+    }
+
+    const [cuerpo, dv] = rut.split('-');
+    if (!/^\d+$/.test(cuerpo) || !/^[0-9K]$/.test(dv)) return false;
+
+    // Debe tener entre 7 y 8 dígitos
+    if (cuerpo.length < 7 || cuerpo.length > 8) return false;
+
+    // Calcular dígito verificador
     let suma = 0;
     let multiplo = 2;
 
@@ -37,9 +47,12 @@ function validarRut(rut) {
     }
 
     const dvEsperado = 11 - (suma % 11);
-    let dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
+    const dvCalculado = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : dvEsperado.toString();
 
-    return dv === dvCalculado;
+    if (dv !== dvCalculado) return false;
+
+    // ✅ Retornar RUT en formato estándar: 12345678-9 o 1234567-8
+    return `${parseInt(cuerpo, 10)}-${dv}`;
 }
 
 // Elemento donde mostrar mensaje de validación
@@ -207,16 +220,17 @@ async function guardarEstudiante(e) {
     e.preventDefault();
 
     const nombre = inputNombre.value.trim();
-    const rut = inputRut.value.trim();
+    let rutLimpio = validarRut(inputRut.value.trim());
+    const rut = rutLimpio;
 
     if (!rut) {
     mostrarToast('El RUT es obligatorio', 'error');
     return;
     }
 
-    if (!validarRut(rut)) {
-        mostrarToast('El RUT ingresado es inválido', 'error');
-        return;
+    if (!rutLimpio) {
+    mostrarToast('El RUT ingresado es inválido', 'error');
+    return;
     }
 
     if (!nombre) {
