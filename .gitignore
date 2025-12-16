@@ -30,7 +30,7 @@ ENV/
 .env
 *.env
 !.env.example
-
+.claude/
 # IDEs
 .vscode/
 .idea/
