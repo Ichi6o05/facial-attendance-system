@@ -1,0 +1,55 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+.test_cache/ # Nuevo: Cache de pruebas
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# =========================================================
+# ANDROID / GRADLE
+# =========================================================
+/android/.gradle/ # Nuevo: Cache de Gradle
+/android/captures/ 
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# =========================================================
+# iOS / XCODE / COCOAPODS
+# =========================================================
+/ios/Flutter/Generated.xcconfig # Nuevo: Archivo de configuración generado
+/ios/Pods/ # Nuevo: Dependencias de CocoaPods
+/ios/.symlinks/ # Nuevo: Enlaces simbólicos de CocoaPods
+/ios/Runner.xcworkspace/ # Nuevo: Workspace
+/ios/Runner.xcodeproj/project.xcworkspace/ # Nuevo: Workspace interno
+/ios/Runner.xcodeproj/xcuserdata/ # Nuevo: Configuración de usuario de Xcode
